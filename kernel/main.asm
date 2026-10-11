@@ -42,7 +42,8 @@ main:
 
     mov si, msg_hello
     call puts
-
+    mov si, msg_test
+    call puts
     hlt ; terminate
 
 .halt:
@@ -50,6 +51,7 @@ main:
 
 
 msg_hello: db 'Hello World', ENDL, 0
+msg_test: db 'Testing does this work!', ENDL, 0
 
 
 times 510-($-$$) db 0 ; ($-$$ length of program in bytes

@@ -1,26 +1,40 @@
 ASM=nasm
 QEMU=qemu-system-i386
 
-SRC_DIR=.
+BOOT_DIR=bootloader
+KERNEL_DIR=kernel
 BUILD_DIR=build
+
+BOOT_SRC=$(BOOT_DIR)/boot.asm
+KERNEL_SRC=$(KERNEL_DIR)/main.asm
+
+IMG=$(BUILD_DIR)/main_floppy.img
 
 .PHONY: all run debug clean
 
-all: $(BUILD_DIR)/main.img
+all: $(IMG)
 
-$(BUILD_DIR)/main.img: $(BUILD_DIR)/main.bin
-	cp $(BUILD_DIR)/main.bin $(BUILD_DIR)/main.img
-	truncate -s 1440k $(BUILD_DIR)/main.img
+# FAT12 floppy: bootloader goes in sector 0, kernel is copied in as a file
+$(IMG): $(BUILD_DIR)/bootloader.bin $(BUILD_DIR)/kernel.bin
+	dd if=/dev/zero of=$(IMG) bs=512 count=2880
+	mkfs.fat -F 12 -n "NBOS" $(IMG)
+	dd if=$(BUILD_DIR)/bootloader.bin of=$(IMG) conv=notrunc
+	mcopy -i $(IMG) $(BUILD_DIR)/kernel.bin "::kernel.bin"
 
-$(BUILD_DIR)/main.bin: $(SRC_DIR)/main.asm
+$(BUILD_DIR)/bootloader.bin: $(BOOT_SRC) | $(BUILD_DIR)
+	$(ASM) $(BOOT_SRC) -f bin -o $@
+
+$(BUILD_DIR)/kernel.bin: $(KERNEL_SRC) | $(BUILD_DIR)
+	$(ASM) $(KERNEL_SRC) -f bin -o $@
+
+$(BUILD_DIR):
 	mkdir -p $(BUILD_DIR)
-	$(ASM) $(SRC_DIR)/main.asm -f bin -o $(BUILD_DIR)/main.bin
 
-run: $(BUILD_DIR)/main.img
-	$(QEMU) -display gtk -fda $(BUILD_DIR)/main.img
+run: $(IMG)
+	$(QEMU) -display gtk -drive file=$(IMG),format=raw,if=floppy
 
-debug: $(BUILD_DIR)/main.img
-	$(QEMU) -display gtk -fda $(BUILD_DIR)/main.img -s -S
+debug: $(IMG)
+	$(QEMU) -display gtk -drive file=$(IMG),format=raw,if=floppy -s -S
 
 clean:
-	rm -rf $(BUILD_DIR)
+	rm -rf $(BUILD_DIR)/*
