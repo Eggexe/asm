@@ -3,10 +3,17 @@ bits 16 ; 16 bit mode for compatability backwards
 
 %define ENDL 0x0D, 0x0A ; NASM macro for end line char
 
+; Bootloader primary purpose is to use the 512 bytes we have
+; access to and load the rest of the OS from there.
+; This OS is currently living on a mock floppy disk
+; as a result, below is some FAT12 stuff to get a filesystem
 ;
 ; FAT12 HEADER
 ; https://wiki.osdev.org/FAT#Boot_Record
 ;
+
+; L17/18 refer to skipping all the data listed here, these are headers for FAT12
+; bdb -> Bios Parameter Block
 jmp short start
 nop
 
