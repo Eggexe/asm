@@ -10,7 +10,7 @@ KERNEL_SRC=$(KERNEL_DIR)/main.asm
 
 IMG=$(BUILD_DIR)/main_floppy.img
 
-.PHONY: all run debug clean
+.PHONY: all run debug clean test test-debug
 
 all: $(IMG)
 
@@ -38,3 +38,21 @@ debug: $(IMG)
 
 clean:
 	rm -rf $(BUILD_DIR)/*
+
+# --- Standalone test program (does not touch the bootloader/kernel build) ---
+TEST_DIR=test
+TEST_SRC=$(TEST_DIR)/test.asm
+TEST_IMG=$(BUILD_DIR)/test.img
+
+$(BUILD_DIR)/test.bin: $(TEST_SRC) | $(BUILD_DIR)
+	$(ASM) $(TEST_SRC) -f bin -o $@
+
+$(TEST_IMG): $(BUILD_DIR)/test.bin
+	cp $< $@
+	truncate -s 1440k $@
+
+test: $(TEST_IMG)
+	$(QEMU) -display gtk -drive file=$(TEST_IMG),format=raw,if=floppy
+
+test-debug: $(TEST_IMG)
+	$(QEMU) -display gtk -drive file=$(TEST_IMG),format=raw,if=floppy -s -S
